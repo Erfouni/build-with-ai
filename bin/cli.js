@@ -764,6 +764,99 @@ program
   });
 
 // ─────────────────────────────────────────────────
+// 13.`search` command
+// ─────────────────────────────────────────────────
+const REGISTRY_URL = 'https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/index.json';
+
+async function fetchRegistry() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(REGISTRY_URL, { signal: controller.signal });
+    if (!res.ok) {
+      console.log(pc.red(`Registry request failed with status ${res.status}.`));
+      return null;
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.templates || [];
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log(pc.red('Registry request timed out after 5 seconds.'));
+    } else {
+      console.log(pc.red('Could not reach the registry. Check your internet connection.'));
+    }
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+program
+  .command('search [keyword]')
+  .description('Search community templates from the remote registry.')
+  .action(async (keyword) => {
+    const templates = await fetchRegistry();
+    if (!templates) return;
+
+    const query = (keyword || '').toLowerCase();
+    const matches = templates.filter((t) => {
+      return !query || [t.id, t.title, t.description].some((value) => String(value).toLowerCase().includes(query));
+    });
+
+    if (matches.length === 0) {
+      console.log(pc.yellow(keyword ? `No templates match "${keyword}".` : 'No templates found in the registry.'));
+      return;
+    }
+
+    console.log();
+    console.log(pc.bold(pc.cyan('COMMUNITY TEMPLATES:')));
+    console.log(pc.dim('─'.repeat(55)));
+    matches.forEach((tpl, idx) => {
+      console.log(`${pc.bold(`${idx + 1}. ${tpl.title}`)} (${pc.green(`${tpl.stepCount ?? '?'} steps`)})`);
+      console.log(`   ${pc.dim('ID:')} ${pc.cyan(tpl.id)}`);
+      console.log(`   ${pc.dim('Author:')} ${tpl.author || 'Unknown'}`);
+      console.log(`   ${pc.dim('Description:')} ${tpl.description}`);
+      console.log();
+    });
+
+    if (!process.stdin.isTTY) return;
+
+    let chosen = matches[0];
+    if (matches.length > 1) {
+      const { templateId } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'templateId',
+          message: 'Select a template:',
+          choices: [
+            ...matches.map((t) => ({ name: `${t.title} (${t.id})`, value: t.id })),
+            { name: 'Cancel', value: null }
+          ]
+        }
+      ]);
+      if (!templateId) return;
+      chosen = matches.find((t) => t.id === templateId);
+    }
+
+    const { confirmInit } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirmInit',
+        message: `Would you like to initialize with "${chosen.title}"?`,
+        default: false
+      }
+    ]);
+
+    if (confirmInit) {
+      if (!chosen.url) {
+        console.log(pc.red('This template has no download URL in the registry.'));
+        return;
+      }
+      await runInit({ template: chosen.url });
+    }
+  });
+
+// ─────────────────────────────────────────────────
 // Default action (no subcommand provided)
 // ─────────────────────────────────────────────────
 program.action(async () => {
