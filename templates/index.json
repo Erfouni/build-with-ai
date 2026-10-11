@@ -1,0 +1,90 @@
+[
+  {
+    "id": "ai-agent",
+    "title": "AI Agent & RAG Pipeline",
+    "description": "End-to-end workflow for designing, building, and deploying a production-ready AI Agent with Retrieval-Augmented Generation (RAG), function calling, and a FastAPI or Express backend.",
+    "stepCount": 14,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/ai-agent.json"
+  },
+  {
+    "id": "ai-orchestration",
+    "title": "AI Orchestration & Multi-Agent System",
+    "description": "Architect and build complex multi-agent AI workflows, state graphs, and tool registries using frameworks like LangGraph or CrewAI.",
+    "stepCount": 14,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/ai-orchestration.json"
+  },
+  {
+    "id": "chrome-extension",
+    "title": "Chrome Browser Extension (Manifest V3)",
+    "description": "Step-by-step workflow for designing, building, and publishing a production-ready Chrome Extension using Manifest V3, Vite, and React.",
+    "stepCount": 12,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/chrome-extension.json"
+  },
+  {
+    "id": "discord-bot",
+    "title": "Discord Bot Workflow",
+    "description": "Step-by-step guidance for designing, building, testing, securing, and hosting a Discord.js application.",
+    "stepCount": 12,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/discord-bot.json"
+  },
+  {
+    "id": "electron-app",
+    "title": "Electron Desktop App",
+    "description": "Step-by-step workflow for building a secure, cross-platform desktop application using Electron, Vite, and React with proper IPC and auto-updating.",
+    "stepCount": 12,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/electron-app.json"
+  },
+  {
+    "id": "fastapi-backend",
+    "title": "Production FastAPI Backend",
+    "description": "End-to-end workflow for designing, building, testing, containerizing, and deploying a production-grade Python backend using FastAPI, Pydantic v2, async SQLAlchemy 2.0, and modern Python tooling.",
+    "stepCount": 12,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/fastapi-backend.json"
+  },
+  {
+    "id": "flutter-app",
+    "title": "Cross-Platform Mobile App (Flutter & Dart)",
+    "description": "Step-by-step workflow for planning, architecting, building, testing, and deploying a production-ready iOS and Android mobile app using Flutter, Clean Architecture, and modern state management.",
+    "stepCount": 16,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/flutter-app.json"
+  },
+  {
+    "id": "mobile-app",
+    "title": "Cross-Platform Mobile App (Expo + React Native)",
+    "description": "Step-by-step workflow for planning, building, and deploying a production-ready cross-platform iOS and Android app using Expo and React Native.",
+    "stepCount": 15,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/mobile-app.json"
+  },
+  {
+    "id": "rest-api",
+    "title": "Backend REST API Service",
+    "description": "Step-by-step guidance for building, testing, securing, and deploying a production-ready REST API service.",
+    "stepCount": 10,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/rest-api.json"
+  },
+  {
+    "id": "saas-mvp",
+    "title": "Modern SaaS MVP",
+    "description": "End-to-end workflow for building and launching a subscription SaaS product with Next.js, Supabase, Stripe, and Resend.",
+    "stepCount": 15,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/saas-mvp.json"
+  },
+  {
+    "id": "web-app",
+    "title": "Full-Stack Web Application",
+    "description": "A comprehensive end-to-end workflow to plan, build, test, and deploy a full-stack web application.",
+    "stepCount": 23,
+    "author": "PicadoLabs",
+    "url": "https://raw.githubusercontent.com/PicadoLabs/build-with-ai/main/templates/web-app.json"
+  }
+]
