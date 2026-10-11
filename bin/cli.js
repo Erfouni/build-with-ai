@@ -823,7 +823,7 @@ program
 
     let chosen = matches[0];
     if (matches.length > 1) {
-      const { templateId } = await inquirer.prompt([
+      const { templateId } = await safePrompt([
         {
           type: 'list',
           name: 'templateId',
@@ -838,7 +838,7 @@ program
       chosen = matches.find((t) => t.id === templateId);
     }
 
-    const { confirmInit } = await inquirer.prompt([
+    const { confirmInit } = await safePrompt([
       {
         type: 'confirm',
         name: 'confirmInit',
