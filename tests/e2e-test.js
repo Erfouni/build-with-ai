@@ -291,7 +291,8 @@ async function executeFullE2ETest() {
         out.includes('Core Value Prop')
           ? 'Effortlessly track daily expenses and visualize category summaries\r\n'
           : null,
-      (out) => (out.includes('Have these been decided') ? '\r\n' : null)
+      (out) => (out.includes('Have these been decided') ? '\r\n' : null),
+      (out) => (out.includes('Advance to the next step anyway') ? 'y\r\n' : null)
     ]);
 
     const stateAfterStep1 = JSON.parse(fs.readFileSync(path.join(testDir, '.buildwithai', 'state.json'), 'utf8'));
@@ -326,7 +327,8 @@ async function executeFullE2ETest() {
       (out) => (out.includes('Paste or enter the AI response') ? `${fullResponseMock}\r\n` : null),
       (out) => (out.includes('Mvp Features') ? 'Add/edit expenses, category breakdown, CSV export\r\n' : null),
       (out) => (out.includes('Non Goals') ? 'Multi-currency conversion, crypto wallets\r\n' : null),
-      (out) => (out.includes('Have these been decided') ? '\r\n' : null)
+      (out) => (out.includes('Have these been decided') ? '\r\n' : null),
+      (out) => (out.includes('Advance to the next step anyway') ? 'y\r\n' : null)
     ]);
 
     assert(fs.existsSync(path.join(testDir, '.buildwithai', 'history', 'step-02.md')), 'step-02.md created');
@@ -386,6 +388,7 @@ async function executeFullE2ETest() {
 
     // Complete Step 3
     await runInteractiveProcess(['done'], testDir, [
+      (out) => (out.includes('Advance to the next step anyway') ? 'y\r\n' : null),
       (out) => (out.includes('How would you like to record') ? '\r\n' : null),
       (out) => (out.includes('Frontend Stack') ? 'React with Tailwind CSS\r\n' : null),
       (out) => (out.includes('Backend Stack') ? 'Node.js Express REST API\r\n' : null),
@@ -509,6 +512,7 @@ async function executeFullE2ETest() {
 
     // Re-advance to 4
     await runInteractiveProcess(['done'], testDir, [
+      (out) => (out.includes('Advance to the next step anyway') ? 'y\r\n' : null),
       (out) => (out.includes('How would you like to record') ? '\r\n' : null),
       (out) => (out.includes('Frontend Stack') ? 'React with Tailwind CSS\r\n' : null),
       (out) => (out.includes('Backend Stack') ? 'Node.js Express REST API\r\n' : null),

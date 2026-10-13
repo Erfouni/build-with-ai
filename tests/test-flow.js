@@ -35,7 +35,7 @@ const { copyToClipboard } = require('../lib/clipboard');
 
 const { validateTemplate } = require('../lib/validator');
 
-const { findMissingTargetFiles, printTargetFileTips } = require('../lib/ui');
+const { findMissingTargetFiles, printTargetFileTips, getGitChangedFiles } = require('../lib/ui');
 
 async function runIsolatedClipboardFallback(moduleSource) {
   const isolatedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-clipboard-'));
@@ -995,6 +995,36 @@ async function runTests() {
     console.log('  ✔ targetFiles existence check reports missing files and prints friendly tips.');
   } finally {
     fs.rmSync(targetFilesDir, { recursive: true, force: true });
+  }
+
+  // Test 14: getGitChangedFiles parses `git status --porcelain`
+  console.log('\n▶ Test 14: git changed-files helper');
+  const gitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-git-'));
+  try {
+    execSync('git init -q', { cwd: gitDir });
+    execSync('git config user.email "test@example.com" && git config user.name "Test"', { cwd: gitDir });
+    fs.writeFileSync(path.join(gitDir, 'tracked.txt'), 'v1');
+    execSync('git add tracked.txt && git commit -qm init', { cwd: gitDir });
+    fs.writeFileSync(path.join(gitDir, 'tracked.txt'), 'v2'); // modified
+    fs.writeFileSync(path.join(gitDir, 'new.txt'), 'new'); // untracked
+
+    const changed = getGitChangedFiles(gitDir);
+    assert(changed instanceof Set, 'returns a Set inside a git repository');
+    assert(changed.has('tracked.txt'), 'modified file is reported');
+    assert(changed.has('new.txt'), 'untracked file is reported');
+    assert(!changed.has('missing.txt'), 'unchanged paths are not reported');
+
+    // Outside a git repository it returns null instead of throwing
+    const plainDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-nogit-'));
+    try {
+      assert.strictEqual(getGitChangedFiles(plainDir), null, 'non-git directory returns null');
+    } finally {
+      fs.rmSync(plainDir, { recursive: true, force: true });
+    }
+
+    console.log('  ✔ getGitChangedFiles parses git status and stays silent outside git repos.');
+  } finally {
+    fs.rmSync(gitDir, { recursive: true, force: true });
   }
 
   // ── Interactive config editor (`config` command) ──
