@@ -29,7 +29,7 @@ const { getByPath, setByPath, flattenObject, formatContextAsMarkdown } = require
 
 const { parseEditorValue, formatEditorValue, summarizeValue, runConfigEditor } = require('../lib/configEditor');
 
-const { runExport, generateReadme, generateBuildLog } = require('../lib/export');
+const { runExport, generateReadme, generateBuildLog, resolveReadmePath } = require('../lib/export');
 
 const { copyToClipboard } = require('../lib/clipboard');
 
@@ -840,7 +840,7 @@ async function runTests() {
 
   // Test 10: Export Documentation
   console.log('\n▶ Test 10: Export (README.md, BUILD_LOG.md, CONTEXT.md)');
-  runExport(tempDir);
+  await runExport(tempDir);
 
   assert(fs.existsSync(path.join(tempDir, 'README.md')), 'README.md must be generated');
   assert(fs.existsSync(path.join(tempDir, 'BUILD_LOG.md')), 'BUILD_LOG.md must be generated');
@@ -857,6 +857,51 @@ async function runTests() {
   const contextMdContent = fs.readFileSync(path.join(tempDir, '.buildwithai', 'CONTEXT.md'), 'utf8');
   assert(contextMdContent.includes('Project Context & Architecture Decisions'), 'CONTEXT.md header check');
   console.log('  ✔ All export files generated with deterministic content.');
+
+  // Test 10b: Existing README preservation and explicit overwrite
+  const generatedReadme = fs.readFileSync(path.join(tempDir, 'README.md'), 'utf8');
+  fs.writeFileSync(path.join(tempDir, 'README.md'), 'User-authored documentation', 'utf8');
+  await runExport(tempDir, { interactive: false });
+  assert.strictEqual(
+    fs.readFileSync(path.join(tempDir, 'README.md'), 'utf8'),
+    'User-authored documentation',
+    'Non-interactive export must preserve an existing README.md'
+  );
+  assert.strictEqual(
+    fs.readFileSync(path.join(tempDir, 'README.ai.md'), 'utf8'),
+    generatedReadme,
+    'Non-interactive export must write generated content to README.ai.md'
+  );
+  await runExport(tempDir, { force: true });
+  assert.notStrictEqual(
+    fs.readFileSync(path.join(tempDir, 'README.md'), 'utf8'),
+    'User-authored documentation',
+    'Force export must overwrite README.md explicitly'
+  );
+  console.log('  ✔ Existing README.md is preserved unless --force is used.');
+
+  const promptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-export-prompt-'));
+  try {
+    fs.writeFileSync(path.join(promptDir, 'README.md'), 'User-authored documentation', 'utf8');
+    assert.strictEqual(
+      await resolveReadmePath(promptDir, {
+        interactive: true,
+        prompt: async () => ({ action: 'fallback' })
+      }),
+      path.join(promptDir, 'README.ai.md'),
+      'Interactive fallback choice must select README.ai.md'
+    );
+    assert.strictEqual(
+      await resolveReadmePath(promptDir, {
+        interactive: true,
+        prompt: async () => ({ action: 'cancel' })
+      }),
+      null,
+      'Interactive cancel choice must preserve the existing README.md'
+    );
+  } finally {
+    fs.rmSync(promptDir, { recursive: true, force: true });
+  }
 
   // Test 11: Reset Project
   console.log('\n▶ Test 11: Reset Project (.buildwithai cleanup)');

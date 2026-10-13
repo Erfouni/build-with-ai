@@ -711,12 +711,13 @@ program
   .description('Export README.md, BUILD_LOG.md, and .buildwithai/CONTEXT.md.')
   .option('--dry-run', 'Show which files would be generated without writing them')
   .option('-o, --out-dir <path>', 'Write documentation to a custom output directory')
-  .action((options) => {
+  .option('-f, --force', 'Overwrite an existing README.md')
+  .action(async (options) => {
     if (!isInitialized()) {
       logger.error('No project found in this directory. Run `npx build-with-ai init` first.');
       process.exit(1);
     }
-    if (runExport(process.cwd(), options) === false) process.exitCode = 1;
+    if ((await runExport(process.cwd(), options)) === false) process.exitCode = 1;
   });
 
 // ─────────────────────────────────────────────────
@@ -1022,7 +1023,7 @@ program.action(async () => {
       }
       console.log();
     } else if (nextAction === 'export') {
-      if (runExport() === false) process.exitCode = 1;
+      if ((await runExport()) === false) process.exitCode = 1;
     }
   } else {
     console.log(pc.yellow('No active project found in this directory.'));
@@ -1045,4 +1046,7 @@ program.action(async () => {
   }
 });
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -217,7 +217,7 @@ Generates standardized documentation from your build history:
 - `BUILD_LOG.md` — Chronological log of decisions and step history.
 - `.buildwithai/CONTEXT.md` — Markdown projection of recorded state.
 
-Use `--out-dir <path>` to export to a custom directory or `--dry-run` to preview output paths.
+Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview output paths, or `--force` to overwrite an existing `README.md`. Without `--force`, interactive runs ask whether to overwrite, save as `README.ai.md`, or cancel; non-interactive runs preserve `README.md` and write the generated file to `README.ai.md`.
 
 ---
 
@@ -242,6 +242,7 @@ Use `--out-dir <path>` to export to a custom directory or `--dry-run` to preview
 | `npx build-with-ai history [step] [--json]` | Display archived AI responses and step logs. |
 | `npx build-with-ai resume` | Overview dashboard summarizing active step and next action. |
 | `npx build-with-ai export [--out-dir <dir>]` | Generate `README.md`, `BUILD_LOG.md`, and `CONTEXT.md`. |
+| `npx build-with-ai export --force` | Overwrite an existing `README.md` explicitly. |
 | `npx build-with-ai list [-s <query>] [--json]` | List and search available templates with step counts. |
 | `npx build-with-ai reset` | Remove `.buildwithai/` state while leaving project source code intact. |
 
