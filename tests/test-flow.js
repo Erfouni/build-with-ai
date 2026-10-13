@@ -15,10 +15,15 @@ const {
   loadHistory,
   getAllHistory,
   resetProject,
-  getStorageDir
+  getStorageDir,
+  isBranchScopedEnabled,
+  getCurrentGitBranch,
+  sanitizeBranchName
 } = require('../lib/state');
 
 const { loadTemplates, loadRemoteTemplate, getTemplate, resolveStepPrompt } = require('../lib/promptEngine');
+
+const { fetchRegistry, filterTemplates } = require('../lib/registry');
 
 const { getByPath, setByPath, flattenObject, formatContextAsMarkdown } = require('../lib/contextBuilder');
 
@@ -518,6 +523,10 @@ async function runTests() {
   console.log('▶ Test 1: Templates Loading');
   const templates = loadTemplates();
   assert(templates.length >= 2, 'Should load at least 2 templates');
+  assert(
+    !templates.some((t) => t.id === 'index'),
+    'templates/index.json is a registry file and must not load as a template'
+  );
 
   const webAppTemplate = getTemplate('web-app');
   assert(webAppTemplate !== null, 'web-app template must exist');
@@ -1074,6 +1083,154 @@ async function runTests() {
     }
   }
 
+  // ── Branch-scoped storage (BUILD_WITH_AI_BRANCH_SCOPED) ──
+  {
+    const previousEnv = process.env.BUILD_WITH_AI_BRANCH_SCOPED;
+    try {
+      // Default behavior stays 100% backward compatible without the env var.
+      delete process.env.BUILD_WITH_AI_BRANCH_SCOPED;
+      assert.strictEqual(isBranchScopedEnabled(), false, 'Branch scoping must be off by default');
+      const plainDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-branch-plain-'));
+      try {
+        assert.strictEqual(
+          getStorageDir(plainDir),
+          path.join(plainDir, '.buildwithai'),
+          'Storage dir must be the shared root when scoping is off'
+        );
+      } finally {
+        fs.rmSync(plainDir, { recursive: true, force: true });
+      }
+
+      // Branch names are sanitized into a single safe directory segment.
+      assert.strictEqual(sanitizeBranchName('feature/auth'), 'feature-auth');
+      assert.strictEqual(sanitizeBranchName('release 1.0'), 'release-1.0');
+      assert.strictEqual(sanitizeBranchName('main'), 'main');
+      assert.strictEqual(sanitizeBranchName('..'), null, 'Parent references must be rejected');
+      assert.strictEqual(sanitizeBranchName(''), null);
+      assert.strictEqual(sanitizeBranchName('   '), null);
+
+      // Enabled outside a git repo: fall back to the default shared storage.
+      process.env.BUILD_WITH_AI_BRANCH_SCOPED = '1';
+      assert.strictEqual(isBranchScopedEnabled(), true);
+      const nonGitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-branch-nogit-'));
+      try {
+        assert.strictEqual(getCurrentGitBranch(nonGitDir), null, 'Non-git dir must report no branch');
+        assert.strictEqual(
+          getStorageDir(nonGitDir),
+          path.join(nonGitDir, '.buildwithai'),
+          'Must fall back to shared storage without git'
+        );
+        initState(
+          {
+            projectName: 'Fallback project',
+            templateId: 'x',
+            templateTitle: 'X',
+            experienceLevel: 'y',
+            projectIdea: 'z',
+            totalSteps: 1
+          },
+          nonGitDir
+        );
+        assert.strictEqual(loadState(nonGitDir).projectName, 'Fallback project');
+        assert(fs.existsSync(path.join(nonGitDir, '.buildwithai', 'state.json')));
+      } finally {
+        fs.rmSync(nonGitDir, { recursive: true, force: true });
+      }
+
+      // Enabled inside a git repo: state is isolated per branch.
+      let gitAvailable = true;
+      try {
+        execSync('git --version', { stdio: 'ignore' });
+      } catch {
+        gitAvailable = false;
+      }
+      if (gitAvailable) {
+        const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-branch-git-'));
+        try {
+          execSync('git init -b main', { cwd: repoDir, stdio: 'ignore' });
+          // Commit first so `main` exists as a real branch before switching.
+          execSync('git -c user.email=test@test.com -c user.name=test commit --allow-empty -m init', {
+            cwd: repoDir,
+            stdio: 'ignore'
+          });
+          assert.strictEqual(getCurrentGitBranch(repoDir), 'main');
+          assert.strictEqual(getStorageDir(repoDir), path.join(repoDir, '.buildwithai', 'branches', 'main'));
+
+          initState(
+            {
+              projectName: 'Main branch project',
+              templateId: 'x',
+              templateTitle: 'X',
+              experienceLevel: 'y',
+              projectIdea: 'z',
+              totalSteps: 2
+            },
+            repoDir
+          );
+          assert.strictEqual(loadState(repoDir).projectName, 'Main branch project');
+          assert(fs.existsSync(path.join(repoDir, '.buildwithai', 'branches', 'main', 'state.json')));
+          assert(
+            !fs.existsSync(path.join(repoDir, '.buildwithai', 'state.json')),
+            'Root state.json must not be created when scoping is enabled'
+          );
+
+          execSync('git checkout -b feature/auth', { cwd: repoDir, stdio: 'ignore' });
+          assert.strictEqual(
+            getStorageDir(repoDir),
+            path.join(repoDir, '.buildwithai', 'branches', 'feature-auth'),
+            'Slashes in branch names must be sanitized, not nested'
+          );
+          assert.strictEqual(loadState(repoDir), null, 'A new branch starts with no state');
+          initState(
+            {
+              projectName: 'Feature branch project',
+              templateId: 'x',
+              templateTitle: 'X',
+              experienceLevel: 'y',
+              projectIdea: 'z',
+              totalSteps: 3
+            },
+            repoDir
+          );
+          assert.strictEqual(loadState(repoDir).projectName, 'Feature branch project');
+
+          execSync('git checkout main', { cwd: repoDir, stdio: 'ignore' });
+          assert.strictEqual(loadState(repoDir).projectName, 'Main branch project', 'Branch states must stay isolated');
+          assert.strictEqual(isInitialized(repoDir), true);
+
+          // Detached HEAD falls back to the default shared storage.
+          const headSha = execSync('git rev-parse HEAD', { cwd: repoDir, encoding: 'utf8', stdio: 'pipe' }).trim();
+          execSync(`git checkout ${headSha}`, { cwd: repoDir, stdio: 'ignore' });
+          assert.strictEqual(getCurrentGitBranch(repoDir), null, 'Detached HEAD must report no branch');
+          assert.strictEqual(
+            getStorageDir(repoDir),
+            path.join(repoDir, '.buildwithai'),
+            'Detached HEAD must fall back to shared storage'
+          );
+          execSync('git checkout main', { cwd: repoDir, stdio: 'ignore' });
+
+          // resetProject clears only the current branch's storage.
+          resetProject(repoDir);
+          assert.strictEqual(loadState(repoDir), null);
+          assert(
+            fs.existsSync(path.join(repoDir, '.buildwithai', 'branches', 'feature-auth', 'state.json')),
+            'Other branches must survive a reset'
+          );
+        } finally {
+          fs.rmSync(repoDir, { recursive: true, force: true });
+        }
+      }
+
+      console.log('  ✔ branch-scoped storage isolates state per git branch with safe fallback.');
+    } finally {
+      if (previousEnv === undefined) {
+        delete process.env.BUILD_WITH_AI_BRANCH_SCOPED;
+      } else {
+        process.env.BUILD_WITH_AI_BRANCH_SCOPED = previousEnv;
+      }
+    }
+  }
+
   // Test 14: safePrompt cancels cleanly with exit status 130 on Ctrl+C
   console.log('\\n Test 14: safePrompt Ctrl+C handling');
   const safePromptDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-safeprompt-'));
@@ -1141,6 +1298,62 @@ async function runTests() {
   } finally {
     fs.rmSync(safePromptDir, { recursive: true, force: true });
   }
+
+  // Registry search: keyword filtering
+  console.log('\n▶ Test: Registry keyword filtering');
+  const sampleRegistry = [
+    { id: 'react-app', title: 'React App', description: 'Build a frontend' },
+    { id: 'express-api', title: 'Express API', description: 'REST API with Node' }
+  ];
+  assert.strictEqual(filterTemplates(sampleRegistry, 'react').length, 1, 'Keyword must match by id or title');
+  assert.strictEqual(
+    filterTemplates(sampleRegistry, 'REST').length,
+    1,
+    'Matching must ignore case and use description'
+  );
+  assert.strictEqual(filterTemplates(sampleRegistry, 'zzzz').length, 0, 'Unknown keyword must return no templates');
+  assert.strictEqual(filterTemplates(sampleRegistry).length, 2, 'Missing keyword must return every template');
+  console.log('  ✔ Keyword filtering verified.');
+
+  // Registry search: fetch success, 404, offline and timeout (mock fetch, no network needed)
+  console.log('\n▶ Test: Registry fetch error handling');
+  const okData = await fetchRegistry({
+    fetchImpl: async () => ({ ok: true, json: async () => sampleRegistry })
+  });
+  assert.strictEqual(okData.length, 2, 'Successful fetch must return the registry entries');
+
+  await assert.rejects(
+    fetchRegistry({ fetchImpl: async () => ({ ok: false, status: 404 }) }),
+    (err) => err.status === 404,
+    'A 404 response must reject with err.status 404'
+  );
+
+  await assert.rejects(
+    fetchRegistry({
+      fetchImpl: async () => {
+        throw new TypeError('fetch failed');
+      }
+    }),
+    (err) => err.name === 'TypeError' && err.status === undefined,
+    'A network failure must reject without a status'
+  );
+
+  await assert.rejects(
+    fetchRegistry({
+      timeoutMs: 20,
+      fetchImpl: (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          signal.addEventListener('abort', () => {
+            const abortErr = new Error('aborted');
+            abortErr.name = 'AbortError';
+            reject(abortErr);
+          });
+        })
+    }),
+    (err) => err.name === 'AbortError',
+    'A stalled request must abort after the timeout'
+  );
+  console.log('  ✔ Registry fetch handles success, 404, offline, and timeout.');
 
   // Cleanup temp dir
   fs.rmSync(tempDir, { recursive: true, force: true });
