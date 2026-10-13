@@ -20,6 +20,8 @@ const {
 
 const { loadTemplates, loadRemoteTemplate, getTemplate, resolveStepPrompt } = require('../lib/promptEngine');
 
+const { fetchRegistry, filterTemplates } = require('../lib/registry');
+
 const { getByPath, setByPath, flattenObject, formatContextAsMarkdown } = require('../lib/contextBuilder');
 
 const { runExport, generateReadme, generateBuildLog } = require('../lib/export');
@@ -516,6 +518,10 @@ async function runTests() {
   console.log('▶ Test 1: Templates Loading');
   const templates = loadTemplates();
   assert(templates.length >= 2, 'Should load at least 2 templates');
+  assert(
+    !templates.some((t) => t.id === 'index'),
+    'templates/index.json is a registry file and must not load as a template'
+  );
 
   const webAppTemplate = getTemplate('web-app');
   assert(webAppTemplate !== null, 'web-app template must exist');
@@ -1008,6 +1014,62 @@ async function runTests() {
   } finally {
     fs.rmSync(safePromptDir, { recursive: true, force: true });
   }
+
+  // Registry search: keyword filtering
+  console.log('\n▶ Test: Registry keyword filtering');
+  const sampleRegistry = [
+    { id: 'react-app', title: 'React App', description: 'Build a frontend' },
+    { id: 'express-api', title: 'Express API', description: 'REST API with Node' }
+  ];
+  assert.strictEqual(filterTemplates(sampleRegistry, 'react').length, 1, 'Keyword must match by id or title');
+  assert.strictEqual(
+    filterTemplates(sampleRegistry, 'REST').length,
+    1,
+    'Matching must ignore case and use description'
+  );
+  assert.strictEqual(filterTemplates(sampleRegistry, 'zzzz').length, 0, 'Unknown keyword must return no templates');
+  assert.strictEqual(filterTemplates(sampleRegistry).length, 2, 'Missing keyword must return every template');
+  console.log('  ✔ Keyword filtering verified.');
+
+  // Registry search: fetch success, 404, offline and timeout (mock fetch, no network needed)
+  console.log('\n▶ Test: Registry fetch error handling');
+  const okData = await fetchRegistry({
+    fetchImpl: async () => ({ ok: true, json: async () => sampleRegistry })
+  });
+  assert.strictEqual(okData.length, 2, 'Successful fetch must return the registry entries');
+
+  await assert.rejects(
+    fetchRegistry({ fetchImpl: async () => ({ ok: false, status: 404 }) }),
+    (err) => err.status === 404,
+    'A 404 response must reject with err.status 404'
+  );
+
+  await assert.rejects(
+    fetchRegistry({
+      fetchImpl: async () => {
+        throw new TypeError('fetch failed');
+      }
+    }),
+    (err) => err.name === 'TypeError' && err.status === undefined,
+    'A network failure must reject without a status'
+  );
+
+  await assert.rejects(
+    fetchRegistry({
+      timeoutMs: 20,
+      fetchImpl: (url, { signal }) =>
+        new Promise((resolve, reject) => {
+          signal.addEventListener('abort', () => {
+            const abortErr = new Error('aborted');
+            abortErr.name = 'AbortError';
+            reject(abortErr);
+          });
+        })
+    }),
+    (err) => err.name === 'AbortError',
+    'A stalled request must abort after the timeout'
+  );
+  console.log('  ✔ Registry fetch handles success, 404, offline, and timeout.');
 
   // Cleanup temp dir
   fs.rmSync(tempDir, { recursive: true, force: true });

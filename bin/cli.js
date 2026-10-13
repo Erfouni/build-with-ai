@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+const { fetchRegistry, filterTemplates } = require('../lib/registry');
 const { Command } = require('commander');
 const pc = require('picocolors');
 
@@ -761,6 +761,83 @@ program
     resetProject();
     logger.success('Reset .buildwithai directory. Source files were not touched.');
     console.log();
+  });
+// ─────────────────────────────────────────────────
+// `search` command
+// ─────────────────────────────────────────────────
+program
+  .command('search [keyword]')
+  .description('Search community templates from the remote registry.')
+  .action(async (keyword) => {
+    let templates;
+    try {
+      templates = await fetchRegistry();
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log(pc.red('Registry request timed out after 5 seconds.'));
+      } else if (err.status) {
+        console.log(pc.red(`Registry request failed with status ${err.status}.`));
+      } else {
+        console.log(pc.red('Could not reach the registry. Check your internet connection.'));
+      }
+      return;
+    }
+
+    const matches = filterTemplates(templates, keyword);
+
+    if (matches.length === 0) {
+      console.log(pc.yellow(keyword ? `No templates match "${keyword}".` : 'No templates found in the registry.'));
+      return;
+    }
+
+    console.log();
+    console.log(pc.bold(pc.cyan('COMMUNITY TEMPLATES:')));
+    console.log(pc.dim('─'.repeat(55)));
+    matches.forEach((tpl, idx) => {
+      console.log(`${pc.bold(`${idx + 1}. ${tpl.title}`)} (${pc.green(`${tpl.stepCount ?? '?'} steps`)})`);
+      console.log(`   ${pc.dim('ID:')} ${pc.cyan(tpl.id)}`);
+      console.log(`   ${pc.dim('Author:')} ${tpl.author || 'Unknown'}`);
+      if (tpl.description) {
+        console.log(`   ${pc.dim('Description:')} ${tpl.description}`);
+      }
+      console.log();
+    });
+
+    if (!process.stdin.isTTY) return;
+
+    let chosen = matches[0];
+    if (matches.length > 1) {
+      const { templateId } = await safePrompt([
+        {
+          type: 'list',
+          name: 'templateId',
+          message: 'Select a template:',
+          choices: [
+            ...matches.map((t) => ({ name: `${t.title} (${t.id})`, value: t.id })),
+            { name: 'Cancel', value: null }
+          ]
+        }
+      ]);
+      if (!templateId) return;
+      chosen = matches.find((t) => t.id === templateId);
+    }
+
+    const { confirmInit } = await safePrompt([
+      {
+        type: 'confirm',
+        name: 'confirmInit',
+        message: `Would you like to initialize with "${chosen.title}"?`,
+        default: false
+      }
+    ]);
+
+    if (confirmInit) {
+      if (!chosen.url) {
+        console.log(pc.red('This template has no download URL in the registry.'));
+        return;
+      }
+      await runInit({ template: chosen.url });
+    }
   });
 
 // ─────────────────────────────────────────────────
