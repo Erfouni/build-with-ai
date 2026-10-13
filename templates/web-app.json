@@ -233,7 +233,7 @@
         "src/app/(auth)/signup/page.tsx",
         "src/components/auth/"
       ],
-      "prompt": "Implement the core backend API routes for \"{{project.name}}\" based on our endpoints:\n{{decisions.apiEndpoints}}\n\n1. Complete handler code for Create, Read, Update, Delete operations utilizing Next.js 15 async route parameters.\n2. Request body validation (sanitizing inputs, checking required fields).\n3. Try/catch blocks with appropriate HTTP status codes (200, 201, 400, 404, 500)."
+      "prompt": "Build the client-side authentication screens for \"{{project.name}}\":\n1. Sign In and Sign Up form components with validation.\n2. Utilize React 19 `useActionState` and Server Actions for form submission.\n3. Handle pending states natively and display clear inline error messages if credentials fail."
     },
     {
       "id": "step-12-backend-crud",
@@ -256,7 +256,7 @@
         "src/services/",
         "src/lib/validators.ts"
       ],
-      "prompt": "Implement the core backend API routes for \"{{project.name}}\" based on our endpoints:\n{{decisions.apiEndpoints}}\n\n1. Complete handler code for Create, Read, Update, Delete operations.\n2. Request body validation (sanitizing inputs, checking required fields).\n3. Try/catch blocks with appropriate HTTP status codes (200, 201, 400, 404, 500)."
+      "prompt": "Implement the core backend API routes for \"{{project.name}}\" based on our endpoints:\n{{decisions.apiEndpoints}}\n\n1. Complete handler code for Create, Read, Update, Delete operations utilizing Next.js 15 async route parameters (e.g. `params: Promise<{ id: string }>`).\n2. Request body validation (sanitizing inputs, checking required fields).\n3. Try/catch blocks with appropriate HTTP status codes (200, 201, 400, 404, 500)."
     },
     {
       "id": "step-13-frontend-data-input",
