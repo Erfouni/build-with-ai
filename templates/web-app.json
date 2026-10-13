@@ -62,7 +62,7 @@
       "targetFiles": [
         "package.json"
       ],
-      "prompt": "My experience level is {{project.experienceLevel}} and my project \"{{project.name}}\" requires these MVP features:\n{{decisions.mvpFeatures}}\n\nRecommend a modern, cohesive tech stack with minimal friction:\n1. Frontend framework & styling approach (e.g. Next.js / React + Tailwind CSS).\n2. Backend / API solution (e.g. Node.js Express / Next.js Route Handlers / Fastify).\n3. Database (e.g. SQLite for local / PostgreSQL with Prisma or Drizzle ORM).\n4. Justification for why this stack fits a {{project.experienceLevel}} developer and avoids over-engineering."
+      "prompt": "My experience level is {{project.experienceLevel}} and my project \"{{project.name}}\" requires these MVP features:\n{{decisions.mvpFeatures}}\n\nRecommend a modern, cohesive tech stack with minimal friction:\n1. Frontend framework & styling approach (e.g. Next.js 15 / React 19 + Tailwind CSS v4).\n2. Backend / API solution (e.g. Node.js Express / Next.js Route Handlers / Fastify).\n3. Database (e.g. SQLite for local / PostgreSQL with Prisma 6 or Drizzle ORM).\n4. Justification for why this stack fits a {{project.experienceLevel}} developer and avoids over-engineering."
     },
     {
       "id": "step-04-architecture",
@@ -82,7 +82,7 @@
       "expectedOutput": "A clean directory structure breakdown and component interaction diagram/flow.",
       "recommendedAI": "Claude 3.5 Sonnet / GPT-4o",
       "targetFiles": [],
-      "prompt": "We have chosen the following tech stack for \"{{project.name}}\":\n- Frontend: {{decisions.frontendStack}}\n- Backend: {{decisions.backendStack}}\n- Database: {{decisions.database}}\n\nPlease design the system architecture:\n1. Provide the recommended directory and file layout.\n2. Detail the data flow from client UI interaction down to database persistence and back.\n3. Outline separation of concerns (presentation, business logic, data access layer)."
+      "prompt": "We have chosen the following tech stack for \"{{project.name}}\":\nFrontend: {{decisions.frontendStack}}\nBackend: {{decisions.backendStack}}\nDatabase: {{decisions.database}}\n\nPlease design the system architecture:\n1. Provide the recommended directory and file layout.\n2. Detail the data flow from client UI interaction down to database persistence and back.\n3. Outline separation of concerns (React Server Components vs Client Components, Server Actions for data mutations, data access layer)."
     },
     {
       "id": "step-05-database-schema",
@@ -233,7 +233,7 @@
         "src/app/(auth)/signup/page.tsx",
         "src/components/auth/"
       ],
-      "prompt": "Build the client-side authentication screens for \"{{project.name}}\":\n1. Sign In and Sign Up form components with validation (email format, password length).\n2. Loading state during submission and clear inline error messages if credentials fail.\n3. Client-side authentication context or state hook (e.g. `useAuth()`)."
+      "prompt": "Implement the core backend API routes for \"{{project.name}}\" based on our endpoints:\n{{decisions.apiEndpoints}}\n\n1. Complete handler code for Create, Read, Update, Delete operations utilizing Next.js 15 async route parameters.\n2. Request body validation (sanitizing inputs, checking required fields).\n3. Try/catch blocks with appropriate HTTP status codes (200, 201, 400, 404, 500)."
     },
     {
       "id": "step-12-backend-crud",
@@ -277,7 +277,7 @@
         "src/components/forms/",
         "src/app/(dashboard)/create/"
       ],
-      "prompt": "Build the primary creation/input component for \"{{project.name}}\":\n1. Form component fields matching our data schema.\n2. Async submit handler calling the backend API endpoint.\n3. Input validation, disabled state while submitting, and success notification."
+      "prompt": "Build the primary creation/input component for \"{{project.name}}\":\n1. Form component fields matching our data schema.\n2. Async submit handler utilizing React 19 Server Actions and useActionState.\n3. Input validation, disabled state while submitting, and success notification."
     },
     {
       "id": "step-14-frontend-data-display",
@@ -298,7 +298,7 @@
         "src/components/ui/",
         "src/app/(dashboard)/page.tsx"
       ],
-      "prompt": "Build the data listing and item display view for \"{{project.name}}\":\n1. Main list/grid view component fetching data from the API.\n2. Individual item card or row with actions (Edit, Delete, View Details).\n3. Skeleton loader for pending requests.\n4. Empty state component with an action button when no records exist."
+      "prompt": "Build the data listing and item display view for \"{{project.name}}\":\n1. Main list/grid view async Server Component fetching data directly (React 19 patterns).\n2. Individual item card or row with actions (Edit, Delete, View Details).\n3. Skeleton loader for pending requests.\n4. Empty state component with an action button when no records exist."
     },
     {
       "id": "step-15-frontend-filtering",
