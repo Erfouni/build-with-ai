@@ -33,7 +33,12 @@
       "title": "AI Stack & Backend Framework Selection",
       "goal": "Select the LLM provider, embedding model, vector database, and backend API framework.",
       "requires": ["project.experienceLevel", "decisions.reasoningPattern"],
-      "writes": ["decisions.llmProvider", "decisions.embeddingModel", "decisions.vectorDb", "decisions.backendFramework"],
+      "writes": [
+        "decisions.llmProvider",
+        "decisions.embeddingModel",
+        "decisions.vectorDb",
+        "decisions.backendFramework"
+      ],
       "expectedOutput": "Full stack: OpenAI GPT-4o / Anthropic Claude, text-embedding-3-small, Pinecone / ChromaDB, FastAPI / Express.",
       "recommendedAI": "Claude 3.5 Sonnet",
       "targetFiles": ["requirements.txt", "package.json"],
@@ -173,4 +178,3 @@
     }
   ]
 }
-

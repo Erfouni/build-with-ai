@@ -9,7 +9,7 @@
 [![npm downloads](https://img.shields.io/npm/dt/build-with-ai.svg?style=flat&color=10b981&label=downloads)](https://www.npmjs.com/package/build-with-ai)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Node >= 16](https://img.shields.io/badge/node-%3E%3D18.0.0-f59e0b.svg)](https://nodejs.org)
-[![Zero API Keys](https://img.shields.io/badge/AI_API-None_(100%25_Local)-8b5cf6.svg)](README.md)
+[![Zero API Keys](<https://img.shields.io/badge/AI_API-None_(100%25_Local)-8b5cf6.svg>)](README.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [Quickstart](#quickstart) • [How It Works](#how-it-works) • [Templates](#available-templates) • [Commands](#commands-reference) • [Architecture](#architecture--storage-design) • [Walkthrough](#walkthrough) • [Contributing](CONTRIBUTING.md)
@@ -29,6 +29,7 @@ When building non-trivial applications with AI assistants (Claude, ChatGPT, Curs
 `build-with-ai` solves this by breaking projects into disciplined, sequential phases (Discovery, Schema, Auth, Core CRUD, Testing, Deployment). It maintains a local context store (`context.json`) and automatically interpolates prior architectural decisions into downstream prompts (`{{decisions.key}}`).
 
 ### Core Guarantees
+
 - **Zero API Keys & Zero Cost:** Runs 100% locally in your terminal. No third-party API accounts or rate limits required.
 - **Universal Model Compatibility:** Use with any web interface, IDE plugin, or local model.
 - **Non-Destructive:** Operates entirely within `.buildwithai/` and never touches or overwrites your application source files.
@@ -86,19 +87,19 @@ npx build-with-ai init
 
 `build-with-ai` includes 11 production-ready workflow templates:
 
-| Template ID | Template Title | Steps | Primary Tech Stack |
-| :--- | :--- | :---: | :--- |
-| `web-app` | **Full-Stack Web Application** | 23 | Next.js / React, Tailwind CSS, Prisma ORM, PostgreSQL |
-| `saas-mvp` | **Modern SaaS MVP** | 15 | Next.js 14 App Router, Supabase, Stripe, Resend Email |
-| `rest-api` | **Backend REST API Service** | 10 | Node.js, Fastify / Express, PostgreSQL, Zod |
-| `fastapi-backend` | **Python FastAPI Microservices** | 12 | Python 3.11+, FastAPI, Pydantic v2, Async SQLAlchemy 2.0, Alembic |
-| `mobile-app` | **Cross-Platform Mobile App** | 15 | React Native, Expo Router, NativeWind, EAS Build |
-| `flutter-app` | **Flutter Mobile Application** | 16 | Flutter 3.x, Dart, Riverpod / BLoC, Clean Architecture |
-| `electron-app` | **Electron Desktop Application** | 12 | Electron, Vite, React, IPC Handlers, electron-builder |
-| `chrome-extension` | **Chrome Browser Extension** | 12 | Manifest V3, Vite, React, Shadow DOM |
-| `ai-agent` | **AI Agent & RAG Pipeline** | 14 | LangChain / LlamaIndex, Vector DB, FastAPI / Express |
-| `ai-orchestration` | **AI Orchestration & Multi-Agent** | 14 | LangGraph / CrewAI, AutoGen, Vector DB, Telemetry |
-| `discord-bot` | **Discord Bot Workflow** | 12 | Node.js, discord.js v14, Slash Commands, SQLite / PostgreSQL |
+| Template ID        | Template Title                     | Steps | Primary Tech Stack                                                |
+| :----------------- | :--------------------------------- | :---: | :---------------------------------------------------------------- |
+| `web-app`          | **Full-Stack Web Application**     |  23   | Next.js / React, Tailwind CSS, Prisma ORM, PostgreSQL             |
+| `saas-mvp`         | **Modern SaaS MVP**                |  15   | Next.js 14 App Router, Supabase, Stripe, Resend Email             |
+| `rest-api`         | **Backend REST API Service**       |  10   | Node.js, Fastify / Express, PostgreSQL, Zod                       |
+| `fastapi-backend`  | **Python FastAPI Microservices**   |  12   | Python 3.11+, FastAPI, Pydantic v2, Async SQLAlchemy 2.0, Alembic |
+| `mobile-app`       | **Cross-Platform Mobile App**      |  15   | React Native, Expo Router, NativeWind, EAS Build                  |
+| `flutter-app`      | **Flutter Mobile Application**     |  16   | Flutter 3.x, Dart, Riverpod / BLoC, Clean Architecture            |
+| `electron-app`     | **Electron Desktop Application**   |  12   | Electron, Vite, React, IPC Handlers, electron-builder             |
+| `chrome-extension` | **Chrome Browser Extension**       |  12   | Manifest V3, Vite, React, Shadow DOM                              |
+| `ai-agent`         | **AI Agent & RAG Pipeline**        |  14   | LangChain / LlamaIndex, Vector DB, FastAPI / Express              |
+| `ai-orchestration` | **AI Orchestration & Multi-Agent** |  14   | LangGraph / CrewAI, AutoGen, Vector DB, Telemetry                 |
+| `discord-bot`      | **Discord Bot Workflow**           |  12   | Node.js, discord.js v14, Slash Commands, SQLite / PostgreSQL      |
 
 ### Custom & Remote Templates
 
@@ -119,15 +120,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the template authoring specification 
 ## Walkthrough
 
 ### 1. Initialize
+
 ```bash
 npx build-with-ai init
 ```
+
 Select a template, experience level, and project overview. The `.buildwithai/` workspace is created.
 
 ### 2. Generate Prompt (`next`)
+
 ```bash
 npx build-with-ai next
 ```
+
 The CLI formats the active step, identifies recommended models and target files, and copies the prompt to your clipboard.
 
 ```text
@@ -150,14 +155,17 @@ Prompt copied to clipboard.
 ```
 
 ### 3. Record Decisions (`done`)
+
 Paste the prompt into your AI assistant, review the architectural output, and record the choices:
 
 ```bash
 npx build-with-ai done
 ```
+
 Enter decisions for required keys (e.g., `decisions.targetCustomer`, `decisions.coreValueProp`). Decisions are saved to `context.json`, and the project advances to the next step.
 
 ### 4. Automatic Context Injection
+
 On subsequent steps, previous decisions are automatically injected into the generated prompt:
 
 ```text
@@ -174,6 +182,7 @@ Recommend the optimal production tech stack...
 ```
 
 ### 5. Inspect and Modify Decisions (`context`, `set` & `config`)
+
 View stored decisions or update any value directly using dot-notation:
 
 ```bash
@@ -188,6 +197,7 @@ npx build-with-ai config
 ```
 
 ### 6. Track Progress (`status` & `resume`)
+
 ```bash
 npx build-with-ai status
 ```
@@ -209,10 +219,13 @@ WORKFLOW STEPS:
 ```
 
 ### 7. Export Documentation (`export`)
+
 ```bash
 npx build-with-ai export
 ```
+
 Generates standardized documentation from your build history:
+
 - `README.md` — Project architecture and setup guide.
 - `BUILD_LOG.md` — Chronological log of decisions and step history.
 - `.buildwithai/CONTEXT.md` — Markdown projection of recorded state.
@@ -223,28 +236,28 @@ Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview o
 
 ## Commands Reference
 
-| Command | Description |
-| :--- | :--- |
-| `npx build-with-ai` | Interactive launcher displaying active status or starting initialization. |
-| `npx build-with-ai init` | Start setup wizard (template selection, experience level, project concept). |
-| `npx build-with-ai init --template <path\|url>` | Load a custom template from a local file path or remote HTTPS URL. |
-| `npx build-with-ai next` | Generate and copy the prompt for the current step. |
-| `npx build-with-ai next --no-copy` | Generate the step prompt without accessing the system clipboard. |
-| `npx build-with-ai next --raw` | Output only the raw prompt string for scripting and CLI piping. |
-| `npx build-with-ai next --json` | Output complete step metadata as structured JSON. |
-| `npx build-with-ai done` | Record decisions, archive step logs, and advance to the next step. |
-| `npx build-with-ai back` | Step back to the previous step without removing recorded context. |
-| `npx build-with-ai jump [step]` | Navigate directly to a specific step number. |
-| `npx build-with-ai context [key]` | Inspect recorded decisions or retrieve a specific dot-notation path. |
-| `npx build-with-ai set <key> <value>` | Update a decision in `context.json` from the command line. |
-| `npx build-with-ai config` | Interactively browse and edit recorded decisions (key picker, JSON values parsed). |
-| `npx build-with-ai status [--json]` | Display project progress bar, step list, and recorded decisions. |
-| `npx build-with-ai history [step] [--json]` | Display archived AI responses and step logs. |
-| `npx build-with-ai resume` | Overview dashboard summarizing active step and next action. |
-| `npx build-with-ai export [--out-dir <dir>]` | Generate `README.md`, `BUILD_LOG.md`, and `CONTEXT.md`. |
-| `npx build-with-ai export --force` | Overwrite an existing `README.md` explicitly. |
-| `npx build-with-ai list [-s <query>] [--json]` | List and search available templates with step counts. |
-| `npx build-with-ai reset` | Remove `.buildwithai/` state while leaving project source code intact. |
+| Command                                         | Description                                                                        |
+| :---------------------------------------------- | :--------------------------------------------------------------------------------- |
+| `npx build-with-ai`                             | Interactive launcher displaying active status or starting initialization.          |
+| `npx build-with-ai init`                        | Start setup wizard (template selection, experience level, project concept).        |
+| `npx build-with-ai init --template <path\|url>` | Load a custom template from a local file path or remote HTTPS URL.                 |
+| `npx build-with-ai next`                        | Generate and copy the prompt for the current step.                                 |
+| `npx build-with-ai next --no-copy`              | Generate the step prompt without accessing the system clipboard.                   |
+| `npx build-with-ai next --raw`                  | Output only the raw prompt string for scripting and CLI piping.                    |
+| `npx build-with-ai next --json`                 | Output complete step metadata as structured JSON.                                  |
+| `npx build-with-ai done`                        | Record decisions, archive step logs, and advance to the next step.                 |
+| `npx build-with-ai back`                        | Step back to the previous step without removing recorded context.                  |
+| `npx build-with-ai jump [step]`                 | Navigate directly to a specific step number.                                       |
+| `npx build-with-ai context [key]`               | Inspect recorded decisions or retrieve a specific dot-notation path.               |
+| `npx build-with-ai set <key> <value>`           | Update a decision in `context.json` from the command line.                         |
+| `npx build-with-ai config`                      | Interactively browse and edit recorded decisions (key picker, JSON values parsed). |
+| `npx build-with-ai status [--json]`             | Display project progress bar, step list, and recorded decisions.                   |
+| `npx build-with-ai history [step] [--json]`     | Display archived AI responses and step logs.                                       |
+| `npx build-with-ai resume`                      | Overview dashboard summarizing active step and next action.                        |
+| `npx build-with-ai export [--out-dir <dir>]`    | Generate `README.md`, `BUILD_LOG.md`, and `CONTEXT.md`.                            |
+| `npx build-with-ai export --force`              | Overwrite an existing `README.md` explicitly.                                      |
+| `npx build-with-ai list [-s <query>] [--json]`  | List and search available templates with step counts.                              |
+| `npx build-with-ai reset`                       | Remove `.buildwithai/` state while leaving project source code intact.             |
 
 ### Headless & CI Scripting
 

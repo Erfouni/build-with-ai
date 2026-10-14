@@ -1,24 +1,23 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     open-pull-requests-limit: 5
     commit-message:
-      prefix: "chore(deps)"
+      prefix: 'chore(deps)'
     ignore:
-      - dependency-name: "inquirer"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "clipboardy"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "commander"
-        update-types: ["version-update:semver-major"]
+      - dependency-name: 'inquirer'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'clipboardy'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'commander'
+        update-types: ['version-update:semver-major']
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: 'github-actions'
+    directory: '/'
     schedule:
-      interval: "monthly"
+      interval: 'monthly'
     commit-message:
-      prefix: "ci(actions)"
-
+      prefix: 'ci(actions)'

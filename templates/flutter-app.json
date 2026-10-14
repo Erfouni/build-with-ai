@@ -108,7 +108,10 @@
       "writes": ["decisions.authModule"],
       "expectedOutput": "Login / Register screens, auth state notifier, secure token vault, and logout / session expiry handlers.",
       "recommendedAI": "Claude 3.5 Sonnet",
-      "targetFiles": ["lib/features/auth/presentation/login_screen.dart", "lib/features/auth/data/auth_repository.dart"],
+      "targetFiles": [
+        "lib/features/auth/presentation/login_screen.dart",
+        "lib/features/auth/data/auth_repository.dart"
+      ],
       "prompt": "Implement the complete authentication module for \"{{project.name}}\":\n1. Secure token repository using flutter_secure_storage for access and refresh tokens.\n2. Auth state management using {{decisions.stateManagement}} (Initial, Unauthenticated, Authenticated, Loading, Error).\n3. Login and Registration UI screens with form validation and password visibility toggles.\n4. Biometric authentication helper using local_auth for returning sessions.\n5. Comprehensive logout flow with cache and storage cleanup."
     },
     {
