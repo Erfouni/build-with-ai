@@ -1,5 +1,4 @@
-const fs = require('fs');
-const path = require('path');
+/* global describe, test, expect */
 const { resolveModel, DEFAULT_MODEL_MAPPINGS, getMappings } = require('../lib/models');
 
 describe('models.js - Dynamic Capability Aliasing', () => {
