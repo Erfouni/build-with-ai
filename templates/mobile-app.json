@@ -33,13 +33,7 @@
       "title": "Expo & React Native Stack Selection",
       "goal": "Select the Expo SDK version, navigation library, state management, styling approach, and backend strategy.",
       "requires": ["project.experienceLevel", "decisions.mvpFeatures"],
-      "writes": [
-        "decisions.expoSdk",
-        "decisions.navigationLib",
-        "decisions.stateManagement",
-        "decisions.stylingApproach",
-        "decisions.backendStrategy"
-      ],
+      "writes": ["decisions.expoSdk", "decisions.navigationLib", "decisions.stateManagement", "decisions.stylingApproach", "decisions.backendStrategy"],
       "expectedOutput": "Full stack: Expo SDK 51+, Expo Router v3, NativeWind/Tamagui, Zustand/Jotai, Supabase/Firebase.",
       "recommendedAI": "Claude 3.5 Sonnet",
       "targetFiles": ["package.json", "app.json"],
@@ -191,3 +185,4 @@
     }
   ]
 }
+

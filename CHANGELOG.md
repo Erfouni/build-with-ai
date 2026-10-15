@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-10-03
 
 ### Added
-
 - **Electron Desktop App Template:** Added full 12-step desktop application workflow template (`templates/electron-app.json`) covering IPC, Vite, React, and electron-builder.
 - **Automated Template Schema & DAG Validator:** Zero-dependency template and Context DAG validation engine (`lib/validator.js`) ensuring contract safety.
 - **CI/CD Static Analysis Pipeline:** Added ESLint and Prettier automated checks across Node 18, 20, and 22 in GitHub Actions (`.github/workflows/ci.yml`).
@@ -18,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom Template Documentation:** Added explicit usage examples for local and remote JSON templates via `--template <path|url>`.
 
 ### Fixed
-
 - **Hero Templates Variable Contract:** Audited and resolved missing global variable prerequisites across all built-in hero templates.
 - **Resume Edge Cases:** Hardened `build-with-ai resume` handling for completed workflows and unreadable state files.
 - **Remote Loading Reliability:** Ensured network timeout and stream error recovery on remote template fetching.
@@ -28,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-09-19
 
 ### Added
-
 - **Discord Bot Workflow:** Added comprehensive 12-step guided template (`templates/discord-bot.json`).
 - **History Inspection Command:** Added `build-with-ai history [stepNumber]` to inspect recorded step markdown files with ISO timestamps.
 - **Status Metrics Dashboard:** Enriched `build-with-ai status` with Time Elapsed, Last Updated age, Decisions Count, and Export Readiness.
@@ -37,7 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clipboard Controls:** Added `--no-copy` opt-out and non-interactive `next --raw` / `next --json`.
 
 ### Changed
-
 - **Atomic Persistence:** Upgraded state and context persistence in `lib/state.js` to use atomic temp-file write and rename (`writeJsonAtomic`).
 - **CI Reliability:** Enhanced test runner to strictly exit with non-zero status code on E2E assertion failures.
 - **License:** Updated project licensing to Apache License 2.0.
@@ -47,7 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - 2026-08-29
 
 ### Changed
-
 - Standardized project licensing under Apache License 2.0.
 - Redesigned documentation and repository URLs to align with PicadoLabs ecosystem.
 - Normalized repository line endings via `.gitattributes`.
@@ -58,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-08-29
 
 ### Added
-
 - **New CLI Commands:**
   - `build-with-ai context [key]`: Inspect all recorded decisions or look up a specific dot-notation key.
   - `build-with-ai set <key> <value>`: Modify any decision directly in `context.json` on the fly.
@@ -80,7 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added issue templates, PR template, Dependabot, Code of Conduct, and Security policy.
 
 ### Changed
-
 - Upgraded root interactive menu to include `context` and `jump` quick actions.
 - Enriched `web-app.json` (23 steps) and `rest-api.json` (10 steps) with `targetFiles` and `recommendedAI` metadata.
 
@@ -89,7 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.2] - 2026-08-25
 
 ### Changed
-
 - Packaging and documentation polish for npm publication readiness.
 - Fixed clipboard fallback handler to support both ESM and CommonJS exports.
 - Stripped extraneous logging and emojis for cleaner terminal display.
@@ -99,10 +91,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-08-25
 
 ### Added
-
 - Initial release of `build-with-ai`.
 - Zero-API, local-first workflow engine.
 - 10 core commands: `init`, `next`, `done`, `back`, `status`, `resume`, `export`, `list`, `reset`, and root interactive launcher.
 - Automatic context injection with dot-notation placeholders (`{{decisions.database}}`).
 - Full-Stack Web App (`web-app.json`) and Backend REST API (`rest-api.json`) templates.
 - Markdown documentation generator (`export` for `README.md`, `BUILD_LOG.md`, `CONTEXT.md`).
+
