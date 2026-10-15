@@ -23,6 +23,7 @@ const {
   displayBanner,
   formatElapsedTime,
   printTargetFileTips,
+  getGitChangedFiles,
   safePrompt
 } = require('../lib/ui');
 const { runInit } = require('../lib/init');
@@ -243,7 +244,39 @@ program
 
     // Soft, non-blocking nudge: warn if the step's declared target files
     // have not been created in the workspace yet.
-    printTargetFileTips(currentStep.targetFiles);
+    const missingTargets = printTargetFileTips(currentStep.targetFiles);
+
+    // Pre-flight verification (#112): compare the git working tree against
+    // the step's target files. Missing targets get an explicit warning and
+    // the developer can keep the step open instead of advancing.
+    if (missingTargets.length > 0) {
+      const declaredTargets = Array.isArray(currentStep.targetFiles) ? currentStep.targetFiles : [];
+      const changed = getGitChangedFiles();
+      if (changed) {
+        const touched = declaredTargets.filter((entry) => typeof entry === 'string' && changed.has(entry));
+        if (touched.length > 0) {
+          console.log(pc.dim(` Changed in git: ${touched.map((entry) => `"${entry}"`).join(', ')}`));
+        }
+      }
+      for (const entry of missingTargets) {
+        console.log(pc.yellow(`Warning: Target file "${entry}" was not found in the workspace.`));
+      }
+      console.log();
+      const { advanceAnyway } = await safePrompt([
+        {
+          type: 'confirm',
+          name: 'advanceAnyway',
+          message: 'Some target files are missing. Advance to the next step anyway?',
+          default: false
+        }
+      ]);
+      if (!advanceAnyway) {
+        console.log(
+          pc.dim('Keeping the current step open. Create the missing files, then run `npx build-with-ai done` again.')
+        );
+        return;
+      }
+    }
 
     const { recordChoice } = await safePrompt([
       {
