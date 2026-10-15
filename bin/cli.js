@@ -35,8 +35,6 @@ const program = new Command();
 
 const { getMappings } = require('../lib/models');
 
-const { getMappings } = require('../lib/models');
-
 program
   .command('models')
   .description('Display active AI model capability mappings')
