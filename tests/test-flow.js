@@ -31,6 +31,15 @@ const { parseEditorValue, formatEditorValue, summarizeValue, runConfigEditor } =
 
 const { runExport, generateReadme, generateBuildLog, resolveReadmePath } = require('../lib/export');
 
+const {
+  runRulesExport,
+  generateRulesContent,
+  mergeRulesFile,
+  getRuleFilePaths,
+  RULES_BLOCK_START,
+  RULES_BLOCK_END
+} = require('../lib/rules');
+
 const { copyToClipboard } = require('../lib/clipboard');
 
 const { validateTemplate } = require('../lib/validator');
@@ -901,6 +910,95 @@ async function runTests() {
     );
   } finally {
     fs.rmSync(promptDir, { recursive: true, force: true });
+  }
+
+  // Test 10c: export --rules syncs editor rule files from context.json
+  console.log('\n▶ Test 10c: Export --rules (editor rule files)');
+  const rulesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-export-rules-'));
+  try {
+    initState(
+      {
+        projectName: 'Rules Demo',
+        templateId: 'web-app',
+        templateTitle: 'Web App',
+        experienceLevel: 'Intermediate',
+        projectIdea: 'A demo project.',
+        totalSteps: 6
+      },
+      rulesDir
+    );
+    saveContext(
+      {
+        project: { name: 'Rules Demo', idea: 'A demo project.' },
+        decisions: { frontendStack: 'Next.js 14', database: 'PostgreSQL with Prisma', deploymentPlatform: 'Vercel' }
+      },
+      rulesDir
+    );
+
+    // --dry-run must only list paths and write nothing.
+    const listed = await runRulesExport(rulesDir, { dryRun: true });
+    assert.strictEqual(listed.length, 5, 'dry run must list all 5 rule files');
+    assert(!fs.existsSync(path.join(rulesDir, 'CLAUDE.md')), 'dry run must not create rule files');
+
+    // Real run generates all five files.
+    const written = await runRulesExport(rulesDir);
+    assert.strictEqual(written.length, 5, 'all 5 rule files must be written');
+    const expectedFiles = [
+      '.cursorrules',
+      path.join('.cursor', 'rules', 'project-decisions.mdc'),
+      '.windsurfrules',
+      'CLAUDE.md',
+      path.join('.github', 'copilot-instructions.md')
+    ];
+    for (const rel of expectedFiles) {
+      assert(fs.existsSync(path.join(rulesDir, rel)), `${rel} must be generated`);
+    }
+
+    const claude = fs.readFileSync(path.join(rulesDir, 'CLAUDE.md'), 'utf8');
+    assert(claude.includes('Rules Demo'), 'rules must contain the project name');
+    assert(claude.includes('Next.js 14'), 'rules must contain the tech stack');
+    assert(claude.includes('PostgreSQL with Prisma'), 'rules must contain the database choice');
+    assert(claude.includes('Vercel'), 'rules must contain the hosting decision');
+    assert(claude.includes(RULES_BLOCK_START) && claude.includes(RULES_BLOCK_END), 'managed block markers present');
+
+    const mdc = fs.readFileSync(path.join(rulesDir, '.cursor', 'rules', 'project-decisions.mdc'), 'utf8');
+    assert(mdc.startsWith('---'), '.mdc rule file must carry Cursor frontmatter');
+    assert(mdc.includes('description:'), '.mdc frontmatter must describe the rule');
+
+    // Unrelated custom instructions must survive re-sync: they are kept and the
+    // managed block is appended rather than clobbering the file.
+    const customNote = 'Always use TypeScript strict mode.';
+    fs.writeFileSync(path.join(rulesDir, '.windsurfrules'), customNote, 'utf8');
+    await runRulesExport(rulesDir);
+    const wind = fs.readFileSync(path.join(rulesDir, '.windsurfrules'), 'utf8');
+    assert(wind.includes(customNote), 'custom instructions must be preserved');
+    assert(wind.includes(RULES_BLOCK_START), 'managed block must be appended to custom files');
+
+    // Idempotency: a second run replaces the block in place — never duplicates it.
+    await runRulesExport(rulesDir);
+    const claude2 = fs.readFileSync(path.join(rulesDir, 'CLAUDE.md'), 'utf8');
+    assert.strictEqual(claude2.split(RULES_BLOCK_START).length - 1, 1, 're-sync must not duplicate the managed block');
+    assert(claude2.includes('PostgreSQL with Prisma'), 're-sync keeps generated content fresh');
+
+    // Unit checks for the merge helper.
+    assert.strictEqual(
+      mergeRulesFile(null, 'body'),
+      `${RULES_BLOCK_START}\nbody\n${RULES_BLOCK_END}\n`,
+      'missing file becomes just the managed block'
+    );
+    const replaced = mergeRulesFile(
+      `before\n${RULES_BLOCK_START}\nold decisions\n${RULES_BLOCK_END}\nafter`,
+      'new decisions'
+    );
+    assert(
+      replaced.includes('before') && replaced.includes('after') && replaced.includes('new decisions'),
+      'in-place replacement keeps surrounding custom text'
+    );
+    assert(!replaced.includes('old decisions'), 'stale managed content is replaced');
+    assert.strictEqual(getRuleFilePaths(rulesDir).length, 5, 'getRuleFilePaths covers all targets');
+    console.log('  ✔ export --rules generates rule files, preserves custom instructions, and stays idempotent.');
+  } finally {
+    fs.rmSync(rulesDir, { recursive: true, force: true });
   }
 
   // Test 11: Reset Project
