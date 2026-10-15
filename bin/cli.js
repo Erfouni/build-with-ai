@@ -33,6 +33,24 @@ const logger = require('../lib/logger');
 
 const program = new Command();
 
+const { getMappings } = require('../lib/models');
+
+const { getMappings } = require('../lib/models');
+
+program
+  .command('models')
+  .description('Display active AI model capability mappings')
+  .action(() => {
+    const mappings = getMappings();
+    console.log('\nActive Capability Mappings:\n');
+    console.table(
+      Object.entries(mappings).map(([alias, model]) => ({
+        'Capability Alias': alias,
+        'Mapped Model(s)': model,
+      }))
+    );
+  });
+
 program
   .name('build-with-ai')
   .description('A minimal, zero-API CLI guiding developers through building software projects with AI.')
