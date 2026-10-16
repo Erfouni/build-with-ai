@@ -44,7 +44,7 @@ program
     console.table(
       Object.entries(mappings).map(([alias, model]) => ({
         'Capability Alias': alias,
-        'Mapped Model(s)': model,
+        'Mapped Model(s)': model
       }))
     );
   });
