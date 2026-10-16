@@ -23,6 +23,8 @@ const {
 
 const { loadTemplates, loadRemoteTemplate, getTemplate, resolveStepPrompt } = require('../lib/promptEngine');
 
+const { resolveModel, DEFAULT_MODEL_MAPPINGS, getMappings } = require('../lib/models');
+
 const { fetchRegistry, filterTemplates } = require('../lib/registry');
 
 const { getByPath, setByPath, flattenObject, formatContextAsMarkdown } = require('../lib/contextBuilder');
@@ -70,6 +72,16 @@ async function runIsolatedClipboardFallback(moduleSource) {
 }
 
 async function runTests() {
+  console.log('▶ Test: Model Capability Aliasing');
+  assert.strictEqual(resolveModel('@reasoning'), DEFAULT_MODEL_MAPPINGS['@reasoning']);
+  assert.strictEqual(resolveModel('@standard'), DEFAULT_MODEL_MAPPINGS['@standard']);
+  assert.strictEqual(resolveModel('@fast'), DEFAULT_MODEL_MAPPINGS['@fast']);
+  assert.strictEqual(resolveModel('@local'), DEFAULT_MODEL_MAPPINGS['@local']);
+  assert.strictEqual(resolveModel('Claude 3.5 Sonnet'), 'Claude 3.5 Sonnet');
+  const testMappings = getMappings();
+  assert.strictEqual(typeof testMappings, 'object');
+  assert.ok(testMappings['@reasoning']);
+  console.log('  ✔ Model Capability Aliasing verified.');
   const invalidStateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-export-state-'));
   try {
     fs.mkdirSync(getStorageDir(invalidStateDir));
