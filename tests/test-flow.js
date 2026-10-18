@@ -1995,6 +1995,260 @@ async function runTests() {
     fs.rmSync(mcpDir, { recursive: true, force: true });
   }
 
+  // Test: BYOK autonomous engine (#108)
+  console.log('\n▶ Test: BYOK autonomous engine');
+  const {
+    PROVIDERS,
+    resolveProviderConfig,
+    chatCompletion,
+    parseFileBlocks,
+    parseDecisions: parseAiDecisions,
+    resolveTargetPath,
+    writeFileBlocks,
+    renderDiff,
+    buildRunSystemPrompt,
+    loadDotEnv
+  } = require('../lib/aiClient');
+
+  assert.deepStrictEqual(
+    Object.keys(PROVIDERS).sort(),
+    ['anthropic', 'deepseek', 'gemini', 'groq', 'jev', 'ollama', 'openai', 'together'],
+    'All eight providers must be registered'
+  );
+  assert.strictEqual(PROVIDERS.ollama.needsKey, false, 'Ollama must not require a key');
+  assert.strictEqual(PROVIDERS.openai.needsKey, true, 'OpenAI must require a key');
+
+  // Key resolution order: --api-key flag > env var > .buildwithai/.env
+  const savedEnv = {};
+  for (const key of ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY', 'BUILD_WITH_AI_PROVIDER']) {
+    savedEnv[key] = process.env[key];
+    delete process.env[key];
+  }
+  try {
+    const defaults = resolveProviderConfig({});
+    assert.strictEqual(defaults.provider, 'openai', 'Default provider must be openai');
+    assert.strictEqual(defaults.baseUrl, 'https://api.openai.com/v1');
+    assert.strictEqual(defaults.model, 'gpt-4o-mini');
+    assert.strictEqual(defaults.apiKey, null, 'No key configured → null');
+
+    process.env.ANTHROPIC_API_KEY = 'env-key';
+    const fromFlag = resolveProviderConfig({
+      provider: 'anthropic',
+      apiKey: 'flag-key',
+      model: 'custom-model',
+      baseUrl: 'https://custom.example/v1'
+    });
+    assert.strictEqual(fromFlag.apiKey, 'flag-key', 'Flag must beat env var');
+    assert.strictEqual(fromFlag.model, 'custom-model');
+    assert.strictEqual(fromFlag.baseUrl, 'https://custom.example/v1');
+    assert.strictEqual(fromFlag.kind, 'anthropic');
+
+    const fromEnv = resolveProviderConfig({ provider: 'anthropic' });
+    assert.strictEqual(fromEnv.apiKey, 'env-key', 'Env var must be picked up');
+    assert.strictEqual(fromEnv.model, 'claude-haiku-4-6');
+
+    const dotenvDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-dotenv-'));
+    try {
+      fs.mkdirSync(path.join(dotenvDir, '.buildwithai'), { recursive: true });
+      fs.writeFileSync(
+        path.join(dotenvDir, '.buildwithai', '.env'),
+        '# comment line\nDEEPSEEK_API_KEY="dotenv-key"\n\nMALFORMED\n'
+      );
+      const fromDotenv = resolveProviderConfig({ provider: 'deepseek', cwd: dotenvDir });
+      assert.strictEqual(fromDotenv.apiKey, 'dotenv-key', '.env value must be picked up (quotes stripped)');
+      assert.deepStrictEqual(loadDotEnv(dotenvDir).DEEPSEEK_API_KEY, 'dotenv-key');
+    } finally {
+      fs.rmSync(dotenvDir, { recursive: true, force: true });
+    }
+    assert.deepStrictEqual(loadDotEnv('/nonexistent-dir-xyz'), {}, 'Missing .env must yield {}');
+
+    assert.throws(() => resolveProviderConfig({ provider: 'nope' }), /Unknown provider/, 'Unknown provider must throw');
+    assert.throws(
+      () => resolveProviderConfig({ provider: 'jev' }),
+      /needs a base URL/,
+      'JEV without JEV_BASE_URL must throw'
+    );
+    process.env.JEV_BASE_URL = 'https://jev.example/api';
+    try {
+      const jev = resolveProviderConfig({ provider: 'jev', apiKey: 'k' });
+      assert.strictEqual(jev.baseUrl, 'https://jev.example/api');
+      assert.strictEqual(jev.kind, 'openai', 'JEV uses the OpenAI-compatible protocol');
+    } finally {
+      delete process.env.JEV_BASE_URL;
+    }
+  } finally {
+    for (const [key, value] of Object.entries(savedEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+  console.log('  ✔ Provider config resolves with flag > env > .env precedence.');
+
+  // chatCompletion: mocked network for every protocol (no real calls)
+  const calls = [];
+  const mockFetch =
+    (responseBody, { ok = true, status = 200 } = {}) =>
+    async (url, init) => {
+      calls.push({ url, init });
+      return {
+        ok,
+        status,
+        text: async () => (typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody))
+      };
+    };
+  const messages = [
+    { role: 'system', content: 'Be terse.' },
+    { role: 'user', content: 'Hello' }
+  ];
+
+  calls.length = 0;
+  const openaiText = await chatCompletion(
+    { kind: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', apiKey: 'k' },
+    messages,
+    { fetchImpl: mockFetch({ choices: [{ message: { content: 'hi' } }] }) }
+  );
+  assert.strictEqual(openaiText, 'hi');
+  assert.ok(calls[0].url.endsWith('/chat/completions'), 'OpenAI-compatible path');
+  assert.strictEqual(calls[0].init.headers.authorization, 'Bearer k');
+  assert.strictEqual(JSON.parse(calls[0].init.body).model, 'gpt-4o-mini');
+
+  calls.length = 0;
+  await chatCompletion(
+    { kind: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3.1', apiKey: null },
+    messages,
+    { fetchImpl: mockFetch({ choices: [{ message: { content: 'local hi' } }] }) }
+  );
+  assert.strictEqual(calls[0].init.headers.authorization, undefined, 'Ollama sends no auth header without a key');
+
+  calls.length = 0;
+  const anthropicText = await chatCompletion(
+    { kind: 'anthropic', baseUrl: 'https://api.anthropic.com/v1', model: 'claude-haiku-4-6', apiKey: 'ak' },
+    messages,
+    { fetchImpl: mockFetch({ content: [{ type: 'text', text: 'claude says hi' }] }) }
+  );
+  assert.strictEqual(anthropicText, 'claude says hi');
+  assert.ok(calls[0].url.endsWith('/messages'), 'Anthropic path');
+  assert.strictEqual(calls[0].init.headers['x-api-key'], 'ak');
+  assert.strictEqual(calls[0].init.headers['anthropic-version'], '2023-06-01');
+  const anthropicBody = JSON.parse(calls[0].init.body);
+  assert.strictEqual(anthropicBody.system, 'Be terse.', 'System prompt must be extracted');
+  assert.strictEqual(anthropicBody.messages.length, 1, 'Only non-system messages are sent');
+
+  calls.length = 0;
+  const geminiText = await chatCompletion(
+    {
+      kind: 'gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      model: 'gemini-2.5-flash',
+      apiKey: 'gk'
+    },
+    messages,
+    {
+      fetchImpl: mockFetch({
+        candidates: [{ content: { parts: [{ text: 'gemini says hi' }] } }]
+      })
+    }
+  );
+  assert.strictEqual(geminiText, 'gemini says hi');
+  assert.ok(calls[0].url.includes(':generateContent'), 'Gemini path');
+  assert.ok(calls[0].url.includes('gemini-2.5-flash'), 'Gemini model in URL');
+  assert.strictEqual(calls[0].init.headers['x-goog-api-key'], 'gk');
+  const geminiBody = JSON.parse(calls[0].init.body);
+  assert.strictEqual(geminiBody.systemInstruction.parts[0].text, 'Be terse.');
+  assert.strictEqual(geminiBody.contents[0].role, 'user');
+
+  await assert.rejects(
+    chatCompletion({ kind: 'openai', baseUrl: 'https://x', model: 'm', apiKey: 'k' }, messages, {
+      fetchImpl: mockFetch({ error: 'nope' }, { ok: false, status: 401 })
+    }),
+    /HTTP 401/,
+    'HTTP errors must reject with the status'
+  );
+  await assert.rejects(
+    chatCompletion({ kind: 'openai', baseUrl: 'https://x', model: 'm', apiKey: 'k' }, messages, {
+      fetchImpl: mockFetch('not json{{{')
+    }),
+    /Invalid JSON/,
+    'Non-JSON bodies must reject'
+  );
+  console.log('  ✔ chatCompletion speaks OpenAI, Anthropic, Gemini and Ollama protocols (mocked).');
+
+  // Parsing: file blocks + decisions
+  const sample = [
+    'Here you go.',
+    '```src/app.js',
+    "console.log('a');",
+    '```',
+    '```decisions',
+    '{ "decisions.database": "PostgreSQL" }',
+    '```',
+    '```src/app.js',
+    "console.log('b');",
+    '```'
+  ].join('\n');
+  const blocks = parseFileBlocks(sample);
+  assert.strictEqual(blocks.length, 1, 'Duplicate paths collapse to one block');
+  assert.strictEqual(blocks[0].path, 'src/app.js');
+  assert.strictEqual(blocks[0].content, "console.log('b');", 'Last block wins, trailing newline stripped');
+  assert.deepStrictEqual(parseAiDecisions(sample), { 'decisions.database': 'PostgreSQL' });
+  assert.deepStrictEqual(parseAiDecisions('no blocks here'), {}, 'Missing decisions block → {}');
+  assert.throws(() => parseAiDecisions('```decisions\n{bad json}\n```'), /Could not parse/, 'Bad JSON must throw');
+  assert.throws(() => parseAiDecisions('```decisions\n[1,2]\n```'), /must be a JSON object/, 'Non-object must throw');
+  console.log('  ✔ File-block and decisions parsing.');
+
+  // Safe paths: traversal and absolute paths are rejected
+  const safeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-aiclient-'));
+  try {
+    assert.strictEqual(resolveTargetPath(safeDir, '../evil.js'), null, 'Path traversal rejected');
+    assert.strictEqual(resolveTargetPath(safeDir, '/abs/path.js'), null, 'Absolute path rejected');
+    assert.strictEqual(resolveTargetPath(safeDir, ''), null, 'Empty path rejected');
+    assert.strictEqual(resolveTargetPath(safeDir, 'src/app.js'), path.join(safeDir, 'src', 'app.js'));
+
+    const results = writeFileBlocks(safeDir, [
+      { path: 'src/app.js', content: "console.log('hi');\n" },
+      { path: '../evil.js', content: 'evil' }
+    ]);
+    assert.strictEqual(results[0].written, true);
+    assert.strictEqual(results[0].created, true);
+    assert.strictEqual(results[1].written, false, 'Unsafe block is skipped, never written');
+    assert.ok(results[1].skipped.includes('unsafe'));
+    assert.strictEqual(fs.readFileSync(path.join(safeDir, 'src', 'app.js'), 'utf8'), "console.log('hi');\n");
+    assert.ok(!fs.existsSync(path.join(os.tmpdir(), 'evil.js')), 'Traversal file must not exist');
+
+    const diff = renderDiff('line1\nline2\nline3\n', 'line1\nCHANGED\nline3\n', { color: false });
+    assert.ok(diff.includes('- line2'), 'Removed line marked');
+    assert.ok(diff.includes('+ CHANGED'), 'Added line marked');
+    assert.ok(diff.includes('  line1'), 'Context lines kept');
+
+    const system = buildRunSystemPrompt({ stepNum: 2, totalSteps: 5, targetFiles: ['src/app.js'] });
+    assert.ok(system.includes('step 2 of 5'));
+    assert.ok(system.includes('src/app.js'));
+  } finally {
+    fs.rmSync(safeDir, { recursive: true, force: true });
+  }
+  console.log('  ✔ Safe file writing and diff rendering.');
+
+  // initState gitignores the BYOK .env file
+  const initDir = fs.mkdtempSync(path.join(os.tmpdir(), 'buildwithai-init-'));
+  try {
+    initState(
+      {
+        projectName: 'BYOK Demo',
+        templateId: 'web-app',
+        templateTitle: 'Web App',
+        experienceLevel: 'Beginner',
+        projectIdea: 'Demo.',
+        totalSteps: 3
+      },
+      initDir
+    );
+    const gitignore = fs.readFileSync(path.join(initDir, '.buildwithai', '.gitignore'), 'utf8');
+    assert.ok(gitignore.includes('.env'), '.buildwithai/.gitignore must ignore .env');
+  } finally {
+    fs.rmSync(initDir, { recursive: true, force: true });
+  }
+  console.log('  ✔ initState gitignores .buildwithai/.env.');
+
   // Cleanup temp dir
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY! ✅\n');

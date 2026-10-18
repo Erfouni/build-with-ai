@@ -232,6 +232,7 @@ Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview o
 | `npx build-with-ai next --no-copy` | Generate the step prompt without accessing the system clipboard. |
 | `npx build-with-ai next --raw` | Output only the raw prompt string for scripting and CLI piping. |
 | `npx build-with-ai next --json` | Output complete step metadata as structured JSON. |
+| `npx build-with-ai next --run [--review]` | BYOK autonomous mode: send the step prompt to your AI provider, write the returned files, record decisions, and advance. |
 | `npx build-with-ai done` | Record decisions, archive step logs, and advance to the next step. |
 | `npx build-with-ai back` | Step back to the previous step without removing recorded context. |
 | `npx build-with-ai jump [step]` | Navigate directly to a specific step number. |
@@ -281,6 +282,28 @@ directly. Available tools: `get_workflow_status`, `get_active_prompt`, `complete
 }
 ```
 
+### BYOK Autonomous Mode (`next --run`)
+
+Bring your own API key (or a local LLM) and skip the copy/paste round-trip: `next --run`
+sends the step prompt to the model, writes the returned file blocks into your project, records
+decisions into `context.json`, saves the raw response to history, and advances the step. Add
+`--review` to see a colored diff of every proposed change and confirm before it is applied.
+
+```bash
+export OPENAI_API_KEY=sk-...                       # or ANTHROPIC_API_KEY / GEMINI_API_KEY / ...
+npx build-with-ai next --run                        # autonomous step via OpenAI
+npx build-with-ai next --run --review               # preview the diff first
+npx build-with-ai next --run --provider anthropic   # pick a provider explicitly
+npx build-with-ai next --run --provider ollama     # local model, no key needed
+```
+
+Supported providers: `openai`, `deepseek`, `groq`, `together`, `ollama` (local,
+`http://localhost:11434/v1`), `anthropic`, `gemini`, `jev`. Keys resolve in this order:
+`--api-key` flag → `<PROVIDER>_API_KEY` environment variable → `.buildwithai/.env`
+(gitignored automatically on `init`). Override the model or endpoint per provider with
+`<PROVIDER>_MODEL` / `<PROVIDER>_BASE_URL` (or `--model` / `--base-url`). The client is
+zero-dependency (native Node `fetch`) and the default clipboard workflow is unchanged when
+`--run` is not passed.
 ---
 
 ## Architecture & Storage Design
