@@ -41,7 +41,6 @@ const { runExport, resolveReadmePath } = require('../lib/export');
 
 const {
   runRulesExport,
-  generateRulesContent,
   mergeRulesFile,
   getRuleFilePaths,
   RULES_BLOCK_START,
