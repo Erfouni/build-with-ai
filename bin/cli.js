@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const fs = require('fs');
 const { fetchRegistry, filterTemplates } = require('../lib/registry');
 const { Command } = require('commander');
 const pc = require('picocolors');
@@ -140,6 +141,151 @@ program
   });
 
 // ─────────────────────────────────────────────────
+// BYOK autonomous step runner (#108)
+// ─────────────────────────────────────────────────
+// Dispatches the current step's prompt to the developer's own AI provider,
+// writes the returned file blocks into the project, records any decisions,
+// saves the raw response to history, and advances the workflow — without
+// the copy/paste round-trip. Default `next` behavior is untouched.
+async function runAutonomousStep({ state, context, totalSteps, currentStepNum, resolvedPrompt, targetFiles, options }) {
+  const {
+    resolveProviderConfig,
+    chatCompletion,
+    parseFileBlocks,
+    parseDecisions,
+    resolveTargetPath,
+    writeFileBlocks,
+    renderDiff,
+    buildRunSystemPrompt
+  } = require('../lib/aiClient');
+
+  let providerConfig;
+  try {
+    providerConfig = resolveProviderConfig({
+      provider: options.provider,
+      apiKey: options.apiKey,
+      baseUrl: options.baseUrl,
+      model: options.model
+    });
+  } catch (err) {
+    logger.error(err.message);
+    process.exit(1);
+  }
+
+  if (providerConfig.needsKey && !providerConfig.apiKey) {
+    logger.error(
+      `No API key for provider "${providerConfig.provider}". ` +
+        `Pass --api-key, set ${providerConfig.envPrefix}_API_KEY, ` +
+        `or add ${providerConfig.envPrefix}_API_KEY=<key> to .buildwithai/.env (gitignored).`
+    );
+    process.exit(1);
+  }
+
+  console.log();
+  logger.info(
+    `Autonomous run: step ${currentStepNum}/${totalSteps} via ${providerConfig.provider} (${providerConfig.model}).`
+  );
+
+  const system = buildRunSystemPrompt({
+    stepNum: currentStepNum,
+    totalSteps,
+    targetFiles
+  });
+
+  let response;
+  try {
+    response = await chatCompletion(providerConfig, [
+      { role: 'system', content: system },
+      { role: 'user', content: resolvedPrompt }
+    ]);
+  } catch (err) {
+    logger.error(`AI request failed: ${err.message}`);
+    process.exit(1);
+  }
+
+  // 1. File blocks → preview (with --review) → safe write.
+  const blocks = parseFileBlocks(response);
+  let written = 0;
+  let skipped = 0;
+  if (blocks.length === 0) {
+    logger.warn('The AI response contained no file blocks.');
+  } else {
+    const applicable = [];
+    for (const block of blocks) {
+      const absolute = resolveTargetPath(process.cwd(), block.path);
+      if (!absolute) {
+        skipped++;
+        logger.warn(`Skipping unsafe path "${block.path}" (outside the project directory).`);
+        continue;
+      }
+      applicable.push({ block, absolute });
+    }
+
+    let apply = true;
+    if (options.review && applicable.length > 0) {
+      console.log();
+      console.log(pc.bold(pc.cyan('Proposed changes:')));
+      for (const { block, absolute } of applicable) {
+        const oldText = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+        console.log();
+        console.log(pc.bold(`--- ${block.path}${oldText ? '' : ' (new file)'}`));
+        console.log(renderDiff(oldText, block.content));
+      }
+      console.log();
+      ({ apply } = await safePrompt([
+        { type: 'confirm', name: 'apply', message: 'Apply these file changes?', default: true }
+      ]));
+    }
+
+    if (apply) {
+      for (const result of writeFileBlocks(
+        process.cwd(),
+        applicable.map((entry) => entry.block)
+      )) {
+        if (result.written) {
+          written++;
+          logger.success(`${result.created ? 'Created' : 'Updated'} ${result.path}`);
+        }
+      }
+    } else {
+      console.log(pc.dim('File changes discarded.'));
+    }
+  }
+
+  // 2. Decisions → context.
+  const recorded = [];
+  try {
+    const decisions = parseDecisions(response);
+    for (const [key, value] of Object.entries(decisions)) {
+      if (typeof key === 'string' && key.trim() && setByPath(context, key, value)) {
+        recorded.push(key);
+      }
+    }
+    if (recorded.length > 0) {
+      saveContext(context);
+    }
+  } catch (err) {
+    logger.warn(err.message);
+  }
+
+  // 3. History + advance, like `done` does.
+  saveHistory(currentStepNum, response);
+  if (!state.completedSteps.includes(currentStepNum)) {
+    state.completedSteps.push(currentStepNum);
+  }
+  state.currentStep = currentStepNum + 1;
+  saveState(state);
+
+  console.log();
+  logger.success(
+    `Step ${currentStepNum} complete: ${written} file(s) written` +
+      (skipped > 0 ? `, ${skipped} skipped` : '') +
+      (recorded.length > 0 ? `, ${recorded.length} decision(s) recorded` : '') +
+      `. Advanced to step ${state.currentStep}/${totalSteps}.`
+  );
+}
+
+// ─────────────────────────────────────────────────
 // 2. `next` command
 // ─────────────────────────────────────────────────
 program
@@ -148,6 +294,18 @@ program
   .option('--raw', 'Print only the raw prompt string (useful for piping to other tools)')
   .option('--json', 'Print the full step data as JSON')
   .option('--no-copy', 'Skip copying the prompt to the clipboard')
+  .option(
+    '--run',
+    'BYOK autonomous mode: send the step prompt to your AI provider, write the returned files, and advance'
+  )
+  .option(
+    '--provider <name>',
+    'AI provider for --run: openai, anthropic, gemini, deepseek, groq, together, ollama, jev'
+  )
+  .option('--api-key <key>', 'API key for --run (overrides env vars and .buildwithai/.env)')
+  .option('--model <model>', 'Model id override for --run')
+  .option('--base-url <url>', 'API base URL override for --run')
+  .option('--review', 'With --run: show a colored diff of the proposed file changes and confirm before applying')
   .action(async (options) => {
     if (!isInitialized()) {
       logger.error('No project found in this directory. Run `npx build-with-ai init` first.');
@@ -187,6 +345,21 @@ program
 
     const currentStep = template.steps[currentStepNum - 1];
     const { resolvedPrompt, warnings, targetFiles, recommendedAI } = resolveStepPrompt(currentStep, context);
+
+    // BYOK autonomous mode: dispatch the prompt to the model, apply the
+    // returned file blocks + decisions, and advance (#108)
+    if (options.run) {
+      await runAutonomousStep({
+        state,
+        context,
+        totalSteps,
+        currentStepNum,
+        resolvedPrompt,
+        targetFiles,
+        options
+      });
+      return;
+    }
 
     // --json mode
     if (options.json) {
