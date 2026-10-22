@@ -1,19 +1,19 @@
-area: cli:
+dx:
   - changed-files:
       - any-glob-to-any-file: ['bin/**', 'lib/**']
 
-area: templates:
+templates:
   - changed-files:
       - any-glob-to-any-file: ['templates/**']
 
-area: tests:
+tests:
   - changed-files:
       - any-glob-to-any-file: ['tests/**']
 
-area: docs:
+documentation:
   - changed-files:
       - any-glob-to-any-file: ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'docs/**', '*.md']
 
-area: ci:
+ci:
   - changed-files:
       - any-glob-to-any-file: ['.github/**', '.githooks/**']

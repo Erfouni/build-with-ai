@@ -60,6 +60,9 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Validate YAML syntax
+        run: node .github/scripts/validate-yaml.js
+
       - name: Verify package packaging (dry run)
         run: npm pack --dry-run
 
