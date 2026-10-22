@@ -112,6 +112,16 @@ npx build-with-ai init --template ./custom-template.json
 npx build-with-ai init --template https://raw.githubusercontent.com/org/repo/main/template.json
 ```
 
+Or discover and initialize with community templates using the remote template registry:
+
+```bash
+# Search all templates in the community registry
+npx build-with-ai search
+
+# Search by keyword
+npx build-with-ai search saas
+```
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the template authoring specification and schema contracts.
 
 ---
@@ -208,7 +218,7 @@ WORKFLOW STEPS:
   [ ] 8. Transactional Email Pipeline [Email]
 ```
 
-### 7. Export Documentation (`export`)
+### 7. Export Documentation and Editor Rules (`export`)
 ```bash
 npx build-with-ai export
 ```
@@ -218,6 +228,25 @@ Generates standardized documentation from your build history:
 - `.buildwithai/CONTEXT.md` — Markdown projection of recorded state.
 
 Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview output paths, or `--force` to overwrite an existing `README.md`. Without `--force`, interactive runs ask whether to overwrite, save as `README.ai.md`, or cancel; non-interactive runs preserve `README.md` and write the generated file to `README.ai.md`.
+
+#### Sync Editor Rules (`export --rules`)
+```bash
+npx build-with-ai export --rules
+```
+Synchronizes recorded architectural decisions from `context.json` into editor instruction files across AI coding environments:
+- `.cursorrules` (Cursor legacy)
+- `.cursor/rules/project-decisions.mdc` (Cursor modern MDC format)
+- `.windsurfrules` (Windsurf)
+- `CLAUDE.md` (Claude Code / Anthropic)
+- `.github/copilot-instructions.md` (GitHub Copilot)
+
+Any custom instructions you have added outside the managed `<!-- BUILD-WITH-AI:START -->` block are preserved. Pass `--dry-run` to inspect target rule files without writing to disk.
+
+### 8. Undo and Rollback (`undo`)
+```bash
+npx build-with-ai undo
+```
+Need to revise a prior step? `undo` safely rolls back the step counter to the previous step, restores the prior snapshot of `context.json`, and cleans up the corresponding step history file in `.buildwithai/history/`.
 
 ---
 
@@ -232,8 +261,10 @@ Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview o
 | `npx build-with-ai next --no-copy` | Generate the step prompt without accessing the system clipboard. |
 | `npx build-with-ai next --raw` | Output only the raw prompt string for scripting and CLI piping. |
 | `npx build-with-ai next --json` | Output complete step metadata as structured JSON. |
-| `npx build-with-ai next --run [--review]` | BYOK autonomous mode: send the step prompt to your AI provider, write the returned files, record decisions, and advance. |
+| `npx build-with-ai next --run [--review]` | BYOK autonomous mode: send prompt to AI provider, write returned files, record decisions, and advance. |
 | `npx build-with-ai done` | Record decisions, archive step logs, and advance to the next step. |
+| `npx build-with-ai done --from-clipboard` | Extract and record decisions directly from the system clipboard using heuristic parsing. |
+| `npx build-with-ai undo` | Roll back the most recent completed step, restore context decisions snapshot, and remove history log. |
 | `npx build-with-ai back` | Step back to the previous step without removing recorded context. |
 | `npx build-with-ai jump [step]` | Navigate directly to a specific step number. |
 | `npx build-with-ai context [key]` | Inspect recorded decisions or retrieve a specific dot-notation path. |
@@ -243,8 +274,10 @@ Use `--out-dir <path>` to export to a custom directory, `--dry-run` to preview o
 | `npx build-with-ai history [step] [--json]` | Display archived AI responses and step logs. |
 | `npx build-with-ai resume` | Overview dashboard summarizing active step and next action. |
 | `npx build-with-ai export [--out-dir <dir>]` | Generate `README.md`, `BUILD_LOG.md`, and `CONTEXT.md`. |
+| `npx build-with-ai export --rules [--dry-run]` | Sync recorded decisions to editor rules (`.cursorrules`, `CLAUDE.md`, etc.). |
 | `npx build-with-ai export --force` | Overwrite an existing `README.md` explicitly. |
 | `npx build-with-ai list [-s <query>] [--json]` | List and search available templates with step counts. |
+| `npx build-with-ai search [keyword]` | Search remote community template registry and initialize with one click. |
 | `npx build-with-ai reset` | Remove `.buildwithai/` state while leaving project source code intact. |
 | `npx build-with-ai mcp` | Start a native MCP stdio server exposing the workflow as tools. |
 
