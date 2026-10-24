@@ -112,6 +112,8 @@ npx build-with-ai init --template ./custom-template.json
 npx build-with-ai init --template https://raw.githubusercontent.com/org/repo/main/template.json
 ```
 
+Custom templates are validated against the schema and automatically saved to `.buildwithai/template.json`, ensuring all subsequent commands (`next`, `done`, `status`, `export`) resolve the template offline without needing the original file or URL.
+
 Or discover and initialize with community templates using the remote template registry:
 
 ```bash
@@ -301,6 +303,7 @@ export BUILD_WITH_AI_NO_COPY=1
 `npx build-with-ai mcp` starts a native [Model Context Protocol](https://modelcontextprotocol.io/) stdio
 server, so editor agents (Cursor, Windsurf, Claude Code) and Claude Desktop can drive the workflow
 directly. Available tools: `get_workflow_status`, `get_active_prompt`, `complete_step`, `get_context`.
+Steps completed through `complete_step` automatically capture a pre-step snapshot so that `undo` can roll them back cleanly.
 
 ```jsonc
 // Cursor: .cursor/mcp.json — Claude Desktop: claude_desktop_config.json ("mcpServers")
@@ -348,6 +351,8 @@ my-project/
 ├── .buildwithai/
 │   ├── state.json        # Progress tracking (currentStep, completedSteps, timestamps)
 │   ├── context.json      # Structured decisions store (single source of truth)
+│   ├── template.json     # Persisted custom template (when initialized via --template)
+│   ├── snapshots/        # Step snapshots enabling safe `undo` and rollback
 │   ├── CONTEXT.md        # Formatted markdown view of context.json
 │   └── history/          # Archived step responses (step-01.md, step-02.md, ...)
 ├── src/                  # User application code (never touched by the CLI)
